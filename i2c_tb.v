@@ -84,6 +84,8 @@ module i2c_tb ();
         .reset      (reset),
         .clk_div    (clk_div),
 
+        .open_drain (1'b1),
+
         .chip_addr  (master_chip_addr),
         .reg_addr   (master_reg_addr),
         .data_in    (master_data_in),
@@ -110,6 +112,9 @@ module i2c_tb ();
     ) i2c_slave (
         .clk        (clock),
         .reset      (reset),
+
+        .open_drain (1'b1),
+
         .chip_addr  (slave_chip_addr),
         .reg_addr   (slave_reg_addr),
         .data_in    (slave_data_in),
@@ -146,7 +151,7 @@ module i2c_tb ();
         write_mode       <= 1'b0;
 
         // Initialize clock
-        #5
+        #2
         clock <= 1'b0;
 
         // Deassert reset

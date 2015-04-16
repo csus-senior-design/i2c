@@ -16,13 +16,15 @@ module i2c_master
         input  reset,          // Reset signal
         input  [11:0] clk_div, // Clock divider value to configure SCL from the system clock
 
-        input  sda_in,   // SDA Input
-        output sda_out,  // SDA Output
-        output sda_oen,  // SDA Output Enable
+        input open_drain, // Open drain
 
-        input  scl_in,   // SCL Input
-        output scl_out,  // SCL Output
-        output scl_oen,  // SCL Output Enable
+        input  sda_in,    // SDA Input
+        output sda_out,   // SDA Output
+        output sda_oen,   // SDA Output Enable
+
+        input  scl_in,    // SCL Input
+        output scl_out,   // SCL Output
+        output scl_oen,   // SCL Output Enable
 
         input [6:0] chip_addr, // Slave Address
         input [REG_ADDR_WIDTH - 1:0] reg_addr, // Register address
@@ -71,8 +73,8 @@ module i2c_master
 
     assign sda_out = sda_reg;
     assign sda_oen = oen_reg;
-    assign scl_out = scl_count[1];
-    assign scl_oen = 0;
+    assign scl_out = open_drain ? 1'b0 : scl_count[1];
+    assign scl_oen = open_drain ? scl_count[1] : 1'b0;
     assign byte_count = sr_count[5:3];
 
     always @ (posedge clk or negedge reset) begin
@@ -115,7 +117,7 @@ module i2c_master
                         oen_reg <= 1'b0;
                     end
                     else begin
-                        sda_reg <= 1'b1;
+                        sda_reg <= open_drain ? 1'b0 : 1'b1;
                         oen_reg <= 1'b1;
                         clk_count <= 0;
                     end
@@ -162,8 +164,8 @@ module i2c_master
                     case (state)
                         s_start_write: begin
                             state   <= s_shift_out;
-                            sda_reg <= 0;
-                            oen_reg <= 0;
+                            sda_reg <= 1'b0;
+                            oen_reg <= 1'b0;
                         end
 
                         s_start_read: begin
@@ -180,7 +182,7 @@ module i2c_master
                         s_stop: begin
                             if (scl_count == 2'b10) begin
                                 state   <= s_idle;
-                                sda_reg <= 1'b1;
+                                sda_reg <= open_drain ? 1'b0 : 1'b1;
                                 oen_reg <= 1'b1;
                                 done    <= 1'b1;
                             end
@@ -190,12 +192,12 @@ module i2c_master
                             if (scl_count == 2'b00) begin
                                 if ((sr_count[2:0]) == 3'b000 && (|sr_count)) begin
                                     state   <= s_rcv_ack;
-                                    sda_reg <= 1'b1;
+                                    sda_reg <= open_drain ? 1'b0 : 1'b1;
                                     oen_reg <= 1'b1;
                                 end
                                 else begin
-                                    sda_reg  <= sr[SR_WIDTH - 1];
-                                    oen_reg  <= 1'b0;
+                                    sda_reg  <= open_drain ? 1'b0 : sr[SR_WIDTH - 1];
+                                    oen_reg  <= open_drain ? sr[SR_WIDTH - 1] : 1'b0;
                                     sr       <= {sr[SR_WIDTH - 2:0], 1'b1};
                                     sr_count <= sr_count + 1'b1;
                                 end
@@ -206,7 +208,7 @@ module i2c_master
                             if (scl_count == 2'b00) begin
                                 if (sr_count == 8 * (DATA_BYTES + 1)) begin
                                     state   <= s_send_nack;
-                                    sda_reg <= 1'b1;
+                                    sda_reg <= open_drain ? 1'b0 : 1'b1;
                                     oen_reg <= 1'b1;
                                 end
                                 else if (sr_count[2:0] == 3'b000) begin
@@ -217,7 +219,7 @@ module i2c_master
                             end
                             else if (scl_count == 2'b01) begin
                                 data_out <= {data_out[8 * DATA_BYTES - 2:0], sda_s};
-                                sda_reg  <= 1'b1;
+                                sda_reg  <= open_drain ? 1'b0 : 1'b1;
                                 oen_reg  <= 1'b1;
                                 sr_count <= sr_count + 1'b1;
                             end
@@ -226,7 +228,7 @@ module i2c_master
                         s_send_ack: begin
                             if (scl_count == 2'b00) begin
                                 state   <= s_shift_in;
-                                sda_reg <= 1'b1;
+                                sda_reg <= open_drain ? 1'b0 : 1'b1;
                                 oen_reg <= 1'b1;
                             end
                             else if (scl_count == 2'b01) begin
@@ -241,7 +243,7 @@ module i2c_master
                                 oen_reg <= 1'b0;
                             end
                             else begin
-                                sda_reg <= 1'b1;
+                                sda_reg <= open_drain ? 1'b0 : 1'b1;
                                 oen_reg <= 1'b1;
                             end
                         end
@@ -267,8 +269,8 @@ module i2c_master
                                 end
                                 else begin
                                     state    <= s_shift_out;
-                                    sda_reg  <= sr[SR_WIDTH - 1];
-                                    oen_reg  <= 1'b0;
+                                    sda_reg  <= open_drain ? 1'b0 : sr[SR_WIDTH - 1];
+                                    oen_reg  <= open_drain ? sr[SR_WIDTH - 1] : 1'b0;
                                     sr       <= {sr[SR_WIDTH - 2:0], 1'b1};
                                     sr_count <= sr_count + 1'b1;
                                 end
