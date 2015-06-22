@@ -69,6 +69,7 @@ module i2c_master
     reg writing, reading, in_prog;
 
     // FSM state
+    (* syn_encoding = "safe" *)
     reg [3:0] state;
 
     assign sda_out = sda_reg;
