@@ -78,7 +78,7 @@ module i2c_master
     assign scl_oen = open_drain ? scl_count[1] : 1'b0;
     assign byte_count = sr_count[5:3];
 
-    always @ (posedge clk or negedge reset) begin
+    always @ (posedge clk) begin
         if (~reset) begin
             state     <= s_idle;
 
