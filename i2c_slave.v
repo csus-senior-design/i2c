@@ -75,6 +75,7 @@ module i2c_slave
 
 
     // FSM state
+    (* syn_encoding = "safe" *)
     reg [2:0] state;
 
 
@@ -95,7 +96,7 @@ module i2c_slave
     assign sda_falling = ~sda_s &&  sda_ss;
 
 
-    always @(posedge clk or negedge reset) begin
+    always @(posedge clk) begin
         if (~reset) begin
             state       <= s_idle;
             sda_reg     <= 1'b1;
